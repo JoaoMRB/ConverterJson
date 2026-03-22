@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor Excel / JSON</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container py-4 py-lg-5 app-shell">
+        <header class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+            <div>
+                <span class="hero-badge mb-3">
+                    <i class="bi bi-stars"></i>
+                    Conversor avancado para portfolio
+                </span>
+                <h1 class="hero-title mb-3">Excel para JSON, JSON para Excel, com preview e controlo total.</h1>
+                <p class="hero-text mb-0">
+                    Carrega ficheiros Excel ou CSV, edita os dados antes de converter, escolhe o modo de output,
+                    exporta JSON diretamente e volta a gerar Excel a partir de JSON quando precisares.
+                </p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-light btn-sm floating-help" id="helpButton" type="button" data-bs-toggle="tooltip" data-bs-placement="left" title="Podes arrastar ficheiros, escolher uma sheet especifica, editar o preview, gerar JSON minificado ou formatado e exportar JSON ou Excel em poucos cliques.">
+                    <i class="bi bi-question-circle"></i>
+                    Ajuda
+                </button>
+                <button class="btn btn-outline-light btn-sm" id="themeToggle" type="button" aria-label="Alternar tema">
+                    <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="d-grid gap-4">
+            <section class="glass-card rounded-5 p-4 p-lg-5 fade-up">
+                <div class="row g-4 align-items-stretch">
+                    <div class="col-lg-7">
+                        <label class="drop-zone text-center d-flex flex-column justify-content-center h-100" for="inputFile" id="dropZone">
+                            <div class="drop-icon">
+                                <i class="bi bi-file-earmark-arrow-up"></i>
+                            </div>
+                            <h2 class="h3 mb-2">Arrasta aqui ou clica</h2>
+                            <p class="text-soft mb-3">
+                                Aceita <strong>.xlsx</strong>, <strong>.xls</strong> e <strong>.csv</strong>.
+                                Maximo por ficheiro: 10MB.
+                            </p>
+                            <div class="d-flex flex-wrap justify-content-center gap-2">
+                                <span class="mini-badge"><i class="bi bi-table"></i> Multiplas sheets</span>
+                                <span class="mini-badge"><i class="bi bi-code-slash"></i> Flat / Nested</span>
+                                <span class="mini-badge"><i class="bi bi-filetype-json"></i> Download direto</span>
+                            </div>
+                        </label>
+                        <input type="file" class="d-none" id="inputFile" accept=".xlsx,.xls,.csv" multiple>
+                        <div class="mt-3">
+                            <div class="small text-soft" id="fileSummary">Nenhum ficheiro selecionado.</div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <div class="h-100 rounded-4 p-4 border border-secondary-subtle">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h2 class="panel-title mb-1">Estado do carregamento</h2>
+                                    <p class="text-soft mb-0">Leitura segura, validacao e estatisticas dos dados.</p>
+                                </div>
+                                <span class="badge text-bg-secondary" id="statusBadge">Aguardando</span>
+                            </div>
+
+                            <div class="stats-grid mb-3">
+                                <div class="stat-chip">
+                                    <span class="text-soft small">Ficheiros</span>
+                                    <strong id="statFiles">0</strong>
+                                </div>
+                                <div class="stat-chip">
+                                    <span class="text-soft small">Linhas</span>
+                                    <strong id="statRows">0</strong>
+                                </div>
+                                <div class="stat-chip">
+                                    <span class="text-soft small">Colunas</span>
+                                    <strong id="statCols">0</strong>
+                                </div>
+                                <div class="stat-chip">
+                                    <span class="text-soft small">Sheet</span>
+                                    <strong id="statSheet">-</strong>
+                                </div>
+                            </div>
+
+                            <div class="d-none" id="progressPanel">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div class="spinner-border spinner-border-sm text-info" role="status"></div>
+                                    <span class="small text-soft" id="progressLabel">A ler ficheiro...</span>
+                                </div>
+                                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar" style="width: 0%">0%</div>
+                                </div>
+                            </div>
+
+                            <div class="section-sep my-4"></div>
+
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-brand" id="convertButton" type="button" disabled>
+                                    <i class="bi bi-magic"></i>
+                                    Converter para JSON
+                                </button>
+                                <button class="btn btn-outline-light" id="jsonToExcelButton" type="button">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    JSON para Excel
+                                </button>
+                                <button class="btn btn-outline-danger" id="resetButton" type="button">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    Limpar tudo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card rounded-5 p-4 fade-up">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+                    <div>
+                        <h2 class="panel-title mb-1">Opcoes de conversao</h2>
+                        <p class="text-soft mb-0">Controla as sheets, o tipo de estrutura JSON e o formato de exportacao.</p>
+                    </div>
+                    <span class="mini-badge">
+                        <i class="bi bi-sliders"></i>
+                        Configuracao em tempo real
+                    </span>
+                </div>
+
+                <div class="options-grid">
+                    <div>
+                        <label class="form-label" for="fileSelector">Ficheiro ativo</label>
+                        <select class="form-select" id="fileSelector" disabled>
+                            <option value="0">Escolhe um ficheiro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="sheetSelector">Sheet</label>
+                        <select class="form-select" id="sheetSelector" disabled>
+                            <option value="">Escolhe uma sheet</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="structureMode">Estrutura JSON</label>
+                        <select class="form-select" id="structureMode">
+                            <option value="flat">Flat</option>
+                            <option value="nested">Nested por dot notation</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="containerMode">Container</label>
+                        <select class="form-select" id="containerMode">
+                            <option value="array">Array de objetos</option>
+                            <option value="object">Objeto com chaves</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="keyField">Campo chave</label>
+                        <select class="form-select" id="keyField" disabled>
+                            <option value="">Auto (index)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="allSheetsMode">
+                            <label class="form-check-label" for="allSheetsMode">Converter todas as sheets</label>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="prettyPrint" checked>
+                            <label class="form-check-label" for="prettyPrint">Pretty print</label>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="minifyOutput">
+                            <label class="form-check-label" for="minifyOutput">Minificar JSON</label>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="apiEnvelope">
+                            <label class="form-check-label" for="apiEnvelope">Envelope API</label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card rounded-5 p-4 fade-up">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+                    <div>
+                        <h2 class="panel-title mb-1">Preview editavel</h2>
+                        <p class="text-soft mb-0">Mostra as primeiras 10 linhas. Podes editar celulas antes de converter.</p>
+                    </div>
+                    <button class="btn btn-outline-light btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#previewCollapse" aria-expanded="true" aria-controls="previewCollapse">
+                        <i class="bi bi-layout-text-window-reverse"></i>
+                        Expandir / recolher
+                    </button>
+                </div>
+
+                <div class="collapse show" id="previewCollapse">
+                    <div class="table-wrap">
+                        <table class="table table-hover align-middle preview-table mb-0" id="previewTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Sem dados</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="text-soft">Carrega um ficheiro para ver o preview.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card rounded-5 p-4 fade-up">
+                <div class="row g-4">
+                    <div class="col-xl-8">
+                        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+                            <div>
+                                <h2 class="panel-title mb-1">Output JSON</h2>
+                                <p class="text-soft mb-0">Syntax highlight, expansao em ecra inteiro e acoes rapidas.</p>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="btn btn-outline-light btn-sm" id="copyButton" type="button" disabled>
+                                    <i class="bi bi-clipboard-check"></i>
+                                    Copiar
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" id="downloadButton" type="button" disabled>
+                                    <i class="bi bi-download"></i>
+                                    Baixar JSON
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" id="expandButton" type="button">
+                                    <i class="bi bi-arrows-fullscreen"></i>
+                                    Expandir
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="output-wrapper" id="outputWrapper">
+                            <pre><code class="language-json" id="output">{
+  "status": "Pronto para converter"
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-4">
+                        <div class="rounded-4 border border-secondary-subtle p-3 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h2 class="panel-title mb-1">JSON para Excel</h2>
+                                    <p class="text-soft mb-0">Cola JSON valido e gera um `.xlsx`.</p>
+                                </div>
+                                <span class="mini-badge"><i class="bi bi-arrow-repeat"></i> Bidirecional</span>
+                            </div>
+                            <textarea class="form-control mb-3" id="outputEditor" placeholder='[
+  { "id": 1, "nome": "Ana" }
+]'></textarea>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-warm" id="downloadExcelButton" type="button">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                                    Gerar Excel do JSON
+                                </button>
+                                <button class="btn btn-outline-light" id="loadOutputToEditor" type="button">
+                                    <i class="bi bi-box-arrow-in-down"></i>
+                                    Levar output para editor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center text-soft py-4">
+            Feito por Malog.
+            <a class="link-light ms-1" href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
+        </footer>
+    </div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div class="toast align-items-center text-bg-success border-0" id="appToast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2" id="toastBody">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Operacao concluida.</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
